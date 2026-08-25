@@ -1,90 +1,45 @@
-<div align="center">
-  <h1>Agentic Inbox</h1>
-  <p><em>A self-hosted email client with an AI agent, running entirely on Cloudflare Workers</em></p>
-</div>
+# Agentic Inbox
 
-Agentic Inbox lets you send, receive, and manage emails through a modern web interface -- all powered by your own Cloudflare account. Incoming emails arrive via [Cloudflare Email Routing](https://developers.cloudflare.com/email-routing/), each mailbox is isolated in its own [Durable Object](https://developers.cloudflare.com/durable-objects/) with a SQLite database, and attachments are stored in [R2](https://developers.cloudflare.com/r2/).
+运行在 Cloudflare Workers 上的自托管邮件客户端，用独立邮箱存储与 AI Agent 完成检索、草拟和发送。
 
-An **AI-powered Email Agent** can read your inbox, search conversations, and draft replies -- built with the [Cloudflare Agents SDK](https://developers.cloudflare.com/agents/) and [Workers AI](https://developers.cloudflare.com/workers-ai/).
+[Cloudflare 部署](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/agentic-inbox) · [上游项目](https://github.com/cloudflare/agentic-inbox)
 
-![Agentic Inbox screenshot](./demo_app.png)
+![Agentic Inbox 界面](./demo_app.png)
 
+## 功能
 
-Read the blog post to learn more about Cloudflare Email Service and how to use it with the Agents SDK, MCP, and from the Wrangler CLI: [Email for Agents](https://blog.cloudflare.com/email-for-agents/).
+- 通过 Cloudflare Email Routing 收发邮件，支持会话、搜索、附件与文件夹
+- 每个邮箱使用独立的 Durable Object 与 SQLite，附件存入 R2
+- 内置邮件 Agent，可读取、搜索、草拟和发送邮件
+- 新邮件可自动生成草稿，发送前仍需人工确认
+- 使用 Cloudflare Access 保护 Web 界面与 MCP 接口
 
-## How to setup
+## 开始
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/agentic-inbox)
-
-Click the button above to deploy to your Cloudflare account. The deploy flow will automatically provision R2, Durable Objects, and Workers AI. You'll be prompted for:
-
-- **DOMAINS** -- your domain with Email Routing enabled (e.g. `example.com`)
-
-### After deploying
-
-1. **Set up Email Routing** -- In the Cloudflare dashboard, go to your domain > Email Routing and create a catch-all rule that forwards to this Worker
-2. **Enable Email Service** -- The worker needs the `send_email` binding to send outbound emails. See [Email Service docs](https://developers.cloudflare.com/email-routing/email-workers/send-email-workers/)
-3. **Create a mailbox** -- Visit your deployed app and create a mailbox for any address on your domain (e.g. `hello@example.com`)
-4. **Configure Cloudflare Access** -- Enable [one-click Cloudflare Access](https://developers.cloudflare.com/changelog/post/2025-10-03-one-click-access-for-workers/) on your Worker under Settings > Domains & Routes. The modal will show your `POLICY_AUD` and `TEAM_DOMAIN` values. **You must set these are secrets for your Worker.**
-
-## Features
-
-- **Full email client** — Send and receive emails via Cloudflare Email Routing with a rich text composer, reply/forward threading, folder organization, search, and attachments
-- **Per-mailbox isolation** — Each mailbox runs in its own Durable Object with SQLite storage and R2 for attachments
-- **Built-in AI agent** — Side panel with 9 email tools for reading, searching, drafting, and sending
-- **Auto-draft on new email** — Agent automatically reads inbound emails and generates draft replies, always requiring explicit confirmation before sending
-- **Configurable and persistent** — Custom system prompts per mailbox, persistent chat history, streaming markdown responses, and tool call visibility
-
-## Stack
-
-- **Frontend:** React 19, React Router v7, Tailwind CSS, Zustand, TipTap, `@cloudflare/kumo`
-- **Backend:** Hono, Cloudflare Workers, Durable Objects (SQLite), R2, Email Routing
-- **AI Agent:** Cloudflare Agents SDK (`AIChatAgent`), AI SDK v6, Workers AI (`@cf/moonshotai/kimi-k2.5`), `react-markdown` + `remark-gfm`
-- **Auth:** Cloudflare Access JWT validation (required outside local development)
-
-## Getting Started
+需要 Cloudflare 账号、已启用 Email Routing 的域名、R2、Workers AI、Email Service 与 Cloudflare Access。
 
 ```bash
 npm install
 npm run dev
 ```
 
-### Configuration
-
-1. Set your domain in `wrangler.jsonc`
-2. Create an R2 bucket named `agentic-inbox`: `wrangler r2 bucket create agentic-inbox`
-
-### Deploy
+在 `wrangler.jsonc` 配置域名，并创建 R2 存储桶：
 
 ```bash
+npx wrangler r2 bucket create agentic-inbox
 npm run deploy
 ```
 
-## Prerequisites
+部署后为域名建立转发到 Worker 的 catch-all 规则，并配置 Email Service 与 Cloudflare Access。
 
-- Cloudflare account with a domain
-- [Email Routing](https://developers.cloudflare.com/email-routing/) enabled for receiving
-- [Email Service](https://developers.cloudflare.com/email-service/) enabled for sending
-- [Workers AI](https://developers.cloudflare.com/workers-ai/) enabled (for the agent)
-- [Cloudflare Access](https://developers.cloudflare.com/cloudflare-one/policies/access/) configured for deployed/shared environments (required in production)
+## 安全边界
 
-Any user who passes the shared Cloudflare Access policy can access all mailboxes in this app by design. This includes the MCP server at `/mcp` -- external AI tools (Claude Code, Cursor, etc.) connected via MCP can operate on any mailbox by passing a `mailboxId` parameter. There is no per-mailbox authorization; the Cloudflare Access policy is the single trust boundary.
+Cloudflare Access 是唯一信任边界。通过同一 Access 策略的用户可以访问全部邮箱；MCP 客户端也可通过 `mailboxId` 操作任意邮箱，本项目不提供逐邮箱授权。
 
-## Architecture
+## 许可
 
-```
-┌──────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│   Browser    │────>│  Hono Worker     │────>│  MailboxDO      │
-│  React SPA   │     │  (API + SSR)     │     │  (SQLite + R2)  │
-│  Agent Panel │     │                  │     └─────────────────┘
-└──────┬───────┘     │  /agents/* ──────┼────>┌─────────────────┐
-       │             │                  │     │  EmailAgent DO  │
-       │ WebSocket   │                  │     │  (AIChatAgent)  │
-       └─────────────┤                  │     │  9 email tools  │
-                     │                  │────>│  Workers AI     │
-                     └──────────────────┘     └─────────────────┘
-```
+[Apache License 2.0](./LICENSE)
 
-## License
+上游代码版权归 Cloudflare, Inc. 及其贡献者所有，并依据 Apache-2.0 提供。本仓库中的原创修改（如有）不改变上游版权、通知或许可证。
 
-Apache 2.0 -- see [LICENSE](LICENSE).
+完整归属与适用范围见 [NOTICE](./NOTICE) 与 [LICENSE_SCOPE.md](./LICENSE_SCOPE.md)。
