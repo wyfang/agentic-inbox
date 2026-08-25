@@ -36,10 +36,6 @@ npm run deploy
 
 Cloudflare Access 是唯一信任边界。通过同一 Access 策略的用户可以访问全部邮箱；MCP 客户端也可通过 `mailboxId` 操作任意邮箱，本项目不提供逐邮箱授权。
 
-## 许可
+## 版权说明
 
-[Apache License 2.0](./LICENSE)
-
-上游代码版权归 Cloudflare, Inc. 及其贡献者所有，并依据 Apache-2.0 提供。本仓库中的原创修改（如有）不改变上游版权、通知或许可证。
-
-完整归属与适用范围见 [NOTICE](./NOTICE) 与 [LICENSE_SCOPE.md](./LICENSE_SCOPE.md)。
+项目依据 [Apache License 2.0](./LICENSE) 发布。上游版权归 Cloudflare, Inc. 及其贡献者所有；个人品牌和素材不在许可范围内。
